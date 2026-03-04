@@ -41,4 +41,38 @@ public class Piece {
 
     }
 
+    public int getCol() {
+        return col;
+    }
+
+    public int getRow() {
+        return row;
+    }
+
+    public int getxPos() {
+        return xPos;
+    }
+    public int getyPos() {
+        return yPos;
+    }
+
+    public boolean isWhite() {
+        return isWhite;
+    }
+
+    public void setCol(int col) {
+        this.col = col;
+    }
+
+    public void setRow(int row) {
+        this.row = row;
+    }
+
+    public void setxPos(int xPos) {
+        this.xPos = xPos;
+    }
+
+    public void setyPos(int yPos) {
+        this.yPos = yPos;
+    }
 }
