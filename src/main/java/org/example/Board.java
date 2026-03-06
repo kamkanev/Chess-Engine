@@ -12,6 +12,7 @@ public class Board extends JPanel {
 
     private Color whitesqr =  new Color(255, 255, 223);
     private Color blacksqr = new Color(133, 167, 101);
+    private Color validMoveColor = new Color(59, 154, 26, 168);
 
     private int cols = 8;
     private int rows = 8;
@@ -21,6 +22,8 @@ public class Board extends JPanel {
     public Piece selectedPiece;
 
     Input input = new Input(this);
+
+    CheckScanner checkScanner = new CheckScanner(this);
 
     public Board() {
         this.setPreferredSize(new Dimension(cols * TILESIZE, rows * TILESIZE));
@@ -43,6 +46,16 @@ public class Board extends JPanel {
 
     public void addPiece(Piece p){
         this.pieces.add(p);
+    }
+
+    Piece findKing(boolean iswhite){
+        for(Piece p : pieces){
+            if(p.isWhite() == iswhite && p.getName().equals("King")){
+                return p;
+            }
+        }
+
+        return null;
     }
 
     public void setBoard(){
@@ -86,7 +99,8 @@ public class Board extends JPanel {
         this.addPiece(new Pawn(this, 7, 6, true));
     }
 
-    public void paintComponent(Graphics g) {
+    @Override
+    protected void paintComponent(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
 
         for (int i = 0; i < rows; i++) {
@@ -94,16 +108,44 @@ public class Board extends JPanel {
                 g2d.setColor((i+j) % 2 == 0 ? this.whitesqr : this.blacksqr);
                 g2d.fillRect(j * TILESIZE, i * TILESIZE, TILESIZE, TILESIZE);
             }
+        }
 
-            for (Piece p : pieces) {
-                p.paint(g2d);
+        if (selectedPiece != null) {
+            for (int i = 0; i < rows; i++) {
+                for (int j = 0; j < cols; j++) {
+
+                    if (isValidMove(new Move(this, selectedPiece, j, i))) {
+
+                        g.setColor(validMoveColor);
+//                        g.fillRect(j * TILESIZE, i * TILESIZE, TILESIZE, TILESIZE);
+                        g.fillRoundRect(j * TILESIZE, i * TILESIZE, TILESIZE, TILESIZE, 5, 5);
+                    }
+
+                }
             }
         }
+
+        for (Piece p : pieces) {
+            p.paint(g2d);
+        }
+
     }
 
     public boolean isValidMove(Move move) {
 
         if(sameTeam(move.piece, move.capture)){
+            return false;
+        }
+
+        if(!move.piece.isValidMovement(move.newCol, move.newRow)){
+            return false;
+        }
+
+        if(move.piece.moveCollideWithPiece(move.newCol, move.newRow)){
+            return false;
+        }
+
+        if(checkScanner.isKingChecked(move)){
             return false;
         }
 
@@ -123,7 +165,7 @@ public class Board extends JPanel {
         pieces.remove(move.capture);
     }
 
-    private boolean sameTeam(Piece p1, Piece p2) {
+    protected boolean sameTeam(Piece p1, Piece p2) {
         if(p1 == null || p2 == null){
             return false;
         }

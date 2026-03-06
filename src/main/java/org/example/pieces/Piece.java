@@ -35,6 +35,13 @@ public class Piece {
         this.board = board;
     }
 
+    public boolean isValidMovement(int col, int row){
+        return true;
+    }
+    public boolean moveCollideWithPiece(int col, int row){
+        return false;
+    }
+
     public void paint(Graphics g){
 
         g.drawImage(sprite, xPos, yPos,null);
@@ -47,6 +54,10 @@ public class Piece {
 
     public int getRow() {
         return row;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public int getxPos() {
