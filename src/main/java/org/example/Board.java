@@ -158,6 +158,8 @@ public class Board extends JPanel {
         move.piece.setxPos(move.newCol * TILESIZE);
         move.piece.setyPos(move.newRow * TILESIZE);
 
+        move.piece.isFirstMove = false;
+
         capture(move);
     }
 

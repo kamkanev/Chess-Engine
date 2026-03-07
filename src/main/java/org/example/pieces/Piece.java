@@ -25,6 +25,8 @@ public class Piece {
         }
     }
 
+    public boolean isFirstMove = true;
+
     protected int sheetScale = sheet.getWidth()/6;
 
     Image sprite;
