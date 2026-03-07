@@ -82,8 +82,11 @@ Option 2 (IDE):
 
 ## Next Improvements
 
-- Add legal move generation per piece.
 - Enforce alternating turns.
-- Add check/checkmate detection.
 - Implement special moves (castling, en passant, promotion).
-- Add tests for move validation.
+
+## TODO
+
+- Fix pawn check handling: when the king is in check by a pawn, allow king captures when the capture square is legal and safe (not only running away).
+- Review and fix other gameplay/rules bugs found during move-validation and check-detection testing.
+- Add GUI promotion selection (let the player choose promoted piece type instead of auto-promoting).
