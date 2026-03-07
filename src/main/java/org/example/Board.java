@@ -21,6 +21,8 @@ public class Board extends JPanel {
 
     public Piece selectedPiece;
 
+    private int getEnPassantTile = -1;
+
     Input input = new Input(this);
 
     CheckScanner checkScanner = new CheckScanner(this);
@@ -56,6 +58,10 @@ public class Board extends JPanel {
         }
 
         return null;
+    }
+
+    public int getTileNumber(int col, int row){
+        return row * rows + col;
     }
 
     public void setBoard(){
@@ -153,6 +159,42 @@ public class Board extends JPanel {
     }
 
     public void makeMove(Move move) {
+
+        if(move.piece.getName().equals("Pawn")){
+            movePawn(move);
+        } else {
+
+            move.piece.setCol(move.newCol);
+            move.piece.setRow(move.newRow);
+            move.piece.setxPos(move.newCol * TILESIZE);
+            move.piece.setyPos(move.newRow * TILESIZE);
+
+            move.piece.isFirstMove = false;
+
+            capture(move.capture);
+        }
+    }
+
+    private void movePawn(Move move) {
+
+        int colorIdx = move.piece.isWhite() ? 1 : -1;
+
+        if(getTileNumber(move.newCol, move.newRow) == getEnPassantTile){
+            move.capture = getPieceAt(move.newCol, move.newRow + colorIdx);
+        }
+
+        if(Math.abs(move.piece.getRow() - move.newRow) == 2) {
+            getEnPassantTile = getTileNumber(move.newCol, move.newRow + colorIdx);
+        } else {
+            getEnPassantTile = -1;
+        }
+
+        colorIdx = move.piece.isWhite() ? 0 : 7;
+
+        if(move.newRow == colorIdx){
+            promotePawn(move);
+        }
+
         move.piece.setCol(move.newCol);
         move.piece.setRow(move.newRow);
         move.piece.setxPos(move.newCol * TILESIZE);
@@ -160,11 +202,19 @@ public class Board extends JPanel {
 
         move.piece.isFirstMove = false;
 
-        capture(move);
+        capture(move.capture);
+
+
     }
 
-    private void capture(Move move) {
-        pieces.remove(move.capture);
+    private void promotePawn(Move move) {
+        pieces.add(new Queen(this, move.newCol, move.newRow, move.piece.isWhite()));
+
+        capture(move.piece);
+    }
+
+    private void capture(Piece p) {
+        pieces.remove(p);
     }
 
     protected boolean sameTeam(Piece p1, Piece p2) {
@@ -173,5 +223,9 @@ public class Board extends JPanel {
         }
 
         return p1.isWhite() == p2.isWhite();
+    }
+
+    public int getGetEnPassantTile() {
+        return getEnPassantTile;
     }
 }
