@@ -25,7 +25,7 @@ public class Board extends JPanel {
 
     Input input = new Input(this);
 
-    CheckScanner checkScanner = new CheckScanner(this);
+    public CheckScanner checkScanner = new CheckScanner(this);
 
     public Board() {
         this.setPreferredSize(new Dimension(cols * TILESIZE, rows * TILESIZE));
@@ -162,7 +162,11 @@ public class Board extends JPanel {
 
         if(move.piece.getName().equals("Pawn")){
             movePawn(move);
-        } else {
+        } else if (move.piece.getName().equals("King")) {
+
+            moveKing(move);
+
+        }
 
             move.piece.setCol(move.newCol);
             move.piece.setRow(move.newRow);
@@ -172,7 +176,7 @@ public class Board extends JPanel {
             move.piece.isFirstMove = false;
 
             capture(move.capture);
-        }
+
     }
 
     private void movePawn(Move move) {
@@ -195,15 +199,25 @@ public class Board extends JPanel {
             promotePawn(move);
         }
 
-        move.piece.setCol(move.newCol);
-        move.piece.setRow(move.newRow);
-        move.piece.setxPos(move.newCol * TILESIZE);
-        move.piece.setyPos(move.newRow * TILESIZE);
 
-        move.piece.isFirstMove = false;
+    }
 
-        capture(move.capture);
+    private void moveKing(Move move) {
 
+        if(Math.abs(move.piece.getCol() - move.newCol) == 2) {
+
+            Piece rook;
+            if(move.piece.getCol() < move.newCol){
+                rook = getPieceAt(7, move.piece.getRow());
+                rook.setCol(5);
+            } else {
+                rook = getPieceAt(0, move.piece.getRow());
+                rook.setCol(3);
+            }
+
+            rook.setxPos(rook.getCol() * TILESIZE);
+
+        }
 
     }
 
