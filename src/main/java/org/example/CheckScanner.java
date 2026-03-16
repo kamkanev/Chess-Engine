@@ -116,7 +116,7 @@ public class CheckScanner {
     }
 
     private boolean checkPawn(Piece p, Piece k, int col, int row){
-        return p != null && !board.sameTeam(p, k) && p.getName().equals("Pawn");
+        return p != null && !board.sameTeam(p, k) && p.getName().equals("Pawn") && !(p.getCol() == col && p.getRow() == row);
     }
 
 }

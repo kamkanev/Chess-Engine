@@ -22,7 +22,9 @@ public class King extends Piece {
 
     @Override
     public boolean isValidMovement(int col, int row) {
-        return Math.abs(col - this.col) * (row - this.row) == 1 || Math.abs(col - this.col) + Math.abs(row - this.row) == 1 || canCastle(col, row);
+        return (Math.abs(col - this.col) == 1 && Math.abs(row - this.row) == 1) ||
+                Math.abs(col - this.col) + Math.abs(row - this.row) == 1 ||
+                canCastle(col, row);
     }
 
     private boolean canCastle(int col, int row) {
@@ -35,7 +37,7 @@ public class King extends Piece {
                 if(rook != null && rook.isFirstMove && isFirstMove) {
 
                     return board.getPieceAt(5, row) == null &&
-                            board.getPieceAt(6, col) == null &&
+                            board.getPieceAt(6, row) == null &&
                             !board.checkScanner.isKingChecked(new Move(board, this, 5, row));
 
                 }
@@ -46,8 +48,8 @@ public class King extends Piece {
                 if(rook != null && rook.isFirstMove && isFirstMove) {
 
                     return board.getPieceAt(3, row) == null &&
-                            board.getPieceAt(2, col) == null &&
-                            board.getPieceAt(1, col) == null &&
+                            board.getPieceAt(2, row) == null &&
+                            board.getPieceAt(1, row) == null &&
                             !board.checkScanner.isKingChecked(new Move(board, this, 3, row));
 
                 }
