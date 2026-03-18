@@ -5,6 +5,7 @@ import org.example.pieces.*;
 import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 public class Board extends JPanel {
 
@@ -22,6 +23,9 @@ public class Board extends JPanel {
     public Piece selectedPiece;
 
     private int getEnPassantTile = -1;
+
+    private boolean isWhiteMove = true;
+    private boolean isGameOver = false;
 
     Input input = new Input(this);
 
@@ -139,6 +143,14 @@ public class Board extends JPanel {
 
     public boolean isValidMove(Move move) {
 
+        if(isGameOver){
+            return false;
+        }
+
+        if (move.piece.isWhite() != isWhiteMove) {
+            return false;
+        }
+
         if(sameTeam(move.piece, move.capture)){
             return false;
         }
@@ -177,6 +189,42 @@ public class Board extends JPanel {
 
             capture(move.capture);
 
+            isWhiteMove = !isWhiteMove;
+
+            updateGameState();
+
+    }
+
+    private void updateGameState() {
+
+        Piece king = findKing(isWhiteMove);
+
+        if(checkScanner.isGameOver(king)){
+            if(checkScanner.isKingChecked(new Move(this, king, king.getCol(), king.getRow()))) {
+                System.out.println(isWhiteMove ? "Black wins" : "White wins");
+                isGameOver = true;
+            }else{
+                System.out.println("Stalemate");
+                isGameOver = true;
+            }
+        } else if(insuffiantMaterial(true) && insuffiantMaterial(false)) {
+            System.out.println("Stalemate");
+            System.out.println("Insufficient Material");
+            isGameOver = true;
+        }
+    }
+
+    private boolean insuffiantMaterial(boolean isWhite){
+        ArrayList<String> names = pieces.stream()
+                .filter(p -> p.isWhite() == isWhite)
+                .map(p -> p.getName())
+                .collect(Collectors.toCollection(ArrayList::new));
+
+        if(names.contains("Queen") || names.contains("Rook") || names.contains("Pawn")){
+            return false;
+        }
+
+        return names.size() < 3;
     }
 
     private void movePawn(Move move) {
@@ -237,6 +285,17 @@ public class Board extends JPanel {
         }
 
         return p1.isWhite() == p2.isWhite();
+    }
+
+    public ArrayList<Piece> getPieces(){
+        return pieces;
+    }
+
+    public int getRows(){
+        return rows;
+    }
+    public int getCols(){
+        return cols;
     }
 
     public int getGetEnPassantTile() {
