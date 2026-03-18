@@ -14,14 +14,18 @@ A Java Swing chess board project with draggable pieces and basic capture handlin
 - Loads piece sprites from `src/main/resources/pieces.png`.
 - Sets up a standard starting position for both sides.
 - Supports drag-and-drop piece movement with mouse input.
-- Allows captures and prevents capturing your own pieces.
+- Enforces turn order and prevents capturing your own pieces.
+- Validates legal moves per piece, including path collision checks.
+- Handles check, checkmate, and stalemate detection.
+- Supports castling, en passant, and automatic pawn promotion to queen.
 
 ## Current Rules Implemented
 
-- Piece-specific movement rules are **not** implemented yet.
-- Turn order is **not** enforced.
-- Check/checkmate, castling, promotion, and en passant are **not** implemented.
-- A move is currently considered valid as long as it does not capture a same-color piece.
+- Legal movement rules per piece, including collision checks for sliding pieces.
+- Turn order enforcement.
+- Check, checkmate, and stalemate detection.
+- Castling and en passant.
+- Automatic pawn promotion to queen.
 
 ## Project Structure
 
@@ -55,6 +59,12 @@ mvn -version
 mvn clean package
 ```
 
+## Test
+
+```bash
+mvn test
+```
+
 ## Run
 
 Option 1 (after build):
@@ -73,7 +83,7 @@ Option 2 (IDE):
 - Click a piece to select it.
 - Drag to move it.
 - Release mouse to drop.
-- If the destination contains a same-color piece, the move is rejected and the piece snaps back.
+- If the move is illegal, the piece snaps back.
 
 ## Assets
 
@@ -82,11 +92,10 @@ Option 2 (IDE):
 
 ## Next Improvements
 
-- Enforce alternating turns.
-- Implement special moves (castling, en passant, promotion).
+- Add GUI promotion selection (let the player choose promoted piece type instead of auto-promoting).
+- Expand test coverage for edge cases and regressions.
 
 ## TODO
 
-- Fix pawn check handling: when the king is in check by a pawn, allow king captures when the capture square is legal and safe (not only running away).
 - Review and fix other gameplay/rules bugs found during move-validation and check-detection testing.
 - Add GUI promotion selection (let the player choose promoted piece type instead of auto-promoting).
