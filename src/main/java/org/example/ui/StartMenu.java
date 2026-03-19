@@ -50,7 +50,7 @@ public class StartMenu extends JFrame {
         loadTitles(title, subTitle);
         loadButtons();
 
-        Images.setBackground(this, "back1.png", true);
+        Images.setBackground(this, "back4.jpg", true);
 
     }
 
@@ -75,13 +75,13 @@ public class StartMenu extends JFrame {
         title.setFont(titleFont);
         title.setSize(400, 60);
         title.setLocation(this.getWidth()/2 - title.getWidth()/2, 40);
-        title.setForeground(Color.WHITE);
+        title.setForeground(Color.BLACK);
         title.setVisible(true);
 
         subTitle.setFont(subTitleFont);
         subTitle.setSize(400, 60);
         subTitle.setLocation(this.getWidth()/2 - subTitle.getWidth()/2, title.getHeight() + title.getY() - 20);
-        title.setForeground(Color.WHITE);
+        title.setForeground(Color.BLACK);
         subTitle.setVisible(true);
 
         this.add(title);
