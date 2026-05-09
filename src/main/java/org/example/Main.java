@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.ui.LoadGameWindow;
 import org.example.ui.NewGameWindow;
 import org.example.ui.StartMenu;
 
@@ -20,8 +21,10 @@ public class Main {
         StartMenu stWin = new StartMenu(TITLE, SUBTITLE, windows);
 
         NewGameWindow newGame = new NewGameWindow(TITLE, stWin);
+        LoadGameWindow laodGame = new LoadGameWindow(stWin);
 
         windows.put("new game", newGame);
+        windows.put("load game", laodGame);
 
         stWin.setVisible(true);
 
