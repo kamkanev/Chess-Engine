@@ -73,6 +73,10 @@ public class Piece {
         return isWhite;
     }
 
+    public Image getSprite() {
+        return sprite;
+    }
+
     public void setCol(int col) {
         this.col = col;
     }

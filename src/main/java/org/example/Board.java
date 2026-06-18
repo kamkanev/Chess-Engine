@@ -10,9 +10,11 @@ import java.util.stream.Collectors;
 public class Board extends JPanel {
 
     public final int TILESIZE = 85;
+    public static final Color DEFAULT_WHITE_SQUARE = new Color(255, 255, 223);
+    public static final Color DEFAULT_BLACK_SQUARE = new Color(133, 167, 101);
 
-    private Color whitesqr =  new Color(255, 255, 223);
-    private Color blacksqr = new Color(133, 167, 101);
+    private Color whitesqr = DEFAULT_WHITE_SQUARE;
+    private Color blacksqr = DEFAULT_BLACK_SQUARE;
     private Color validMoveColor = new Color(59, 154, 26, 168);
 
     private int cols = 8;
@@ -32,6 +34,12 @@ public class Board extends JPanel {
     public CheckScanner checkScanner = new CheckScanner(this);
 
     public Board() {
+        this(DEFAULT_WHITE_SQUARE, DEFAULT_BLACK_SQUARE);
+    }
+
+    public Board(Color whitesqr, Color blacksqr) {
+        this.whitesqr = whitesqr;
+        this.blacksqr = blacksqr;
         this.setPreferredSize(new Dimension(cols * TILESIZE, rows * TILESIZE));
 
         addMouseListener(input);
@@ -270,9 +278,46 @@ public class Board extends JPanel {
     }
 
     private void promotePawn(Move move) {
-        pieces.add(new Queen(this, move.newCol, move.newRow, move.piece.isWhite()));
+        pieces.add(choosePromotionPiece(move));
 
         capture(move.piece);
+    }
+
+    private Piece choosePromotionPiece(Move move) {
+        JDialog dialog = new JDialog(SwingUtilities.getWindowAncestor(this), "Promote pawn", Dialog.ModalityType.APPLICATION_MODAL);
+        JPanel panel = new JPanel(new GridLayout(1, 4, 6, 6));
+        panel.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+
+        Piece[] choices = {
+                new Queen(this, move.newCol, move.newRow, move.piece.isWhite()),
+                new Knight(this, move.newCol, move.newRow, move.piece.isWhite()),
+                new Bishop(this, move.newCol, move.newRow, move.piece.isWhite()),
+                new Rook(this, move.newCol, move.newRow, move.piece.isWhite())
+        };
+
+        final Piece[] selectedPromotion = {choices[0]};
+
+        for (Piece choice : choices) {
+            JButton button = new JButton(new ImageIcon(choice.getSprite()));
+            button.setToolTipText(choice.getName());
+            button.setFocusPainted(false);
+            button.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY));
+            button.setBackground(Color.WHITE);
+            button.addActionListener(e -> {
+                selectedPromotion[0] = choice;
+                dialog.dispose();
+            });
+            panel.add(button);
+        }
+
+        dialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        dialog.setUndecorated(true);
+        dialog.add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+
+        return selectedPromotion[0];
     }
 
     private void capture(Piece p) {

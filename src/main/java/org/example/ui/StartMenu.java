@@ -113,7 +113,7 @@ public class StartMenu extends JFrame {
 
                     System.out.println("Create new Game");
                     windows.get(name).setVisible(true);
-                    dispose();
+                    setVisible(false);
                     windows.get(name).setFocusable(true);
 //					new File("worlds").mkdir();
 
@@ -121,14 +121,14 @@ public class StartMenu extends JFrame {
 
                     System.out.println("Load game");
                     windows.get(name).setVisible(true);
-                    dispose();
+                    setVisible(false);
                     windows.get(name).setFocusable(true);
 
                 }else if(name.equals(options.getName())) {
 
                     System.out.println("Open options");
                     windows.get(name).setVisible(true);
-                    dispose();
+                    setVisible(false);
                     windows.get(name).setFocusable(true);
 
                 }
