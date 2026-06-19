@@ -1,10 +1,14 @@
 package org.example;
 
 import org.example.pieces.*;
+import org.example.save.GameSave;
+import org.example.save.SaveManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class Board extends JPanel {
@@ -28,6 +32,9 @@ public class Board extends JPanel {
 
     private boolean isWhiteMove = true;
     private boolean isGameOver = false;
+    private boolean rotateBoardEveryTurn = false;
+    private String gameName;
+    private File saveFile;
 
     Input input = new Input(this);
 
@@ -38,14 +45,46 @@ public class Board extends JPanel {
     }
 
     public Board(Color whitesqr, Color blacksqr) {
+        this(whitesqr, blacksqr, false);
+    }
+
+    public Board(Color whitesqr, Color blacksqr, boolean rotateBoardEveryTurn) {
+        this(whitesqr, blacksqr, rotateBoardEveryTurn, null, null, true);
+    }
+
+    public Board(Color whitesqr, Color blacksqr, boolean rotateBoardEveryTurn, String gameName, File saveFile) {
+        this(whitesqr, blacksqr, rotateBoardEveryTurn, gameName, saveFile, true);
+        saveGame();
+    }
+
+    public Board(GameSave gameSave, File saveFile) {
+        this(new Color(gameSave.getWhiteSquareRgb()), new Color(gameSave.getBlackSquareRgb()),
+                gameSave.isRotateBoardEveryTurn(), gameSave.getGameName(), saveFile, false);
+        this.isWhiteMove = gameSave.isWhiteMove();
+        this.isGameOver = gameSave.isGameOver();
+        this.getEnPassantTile = gameSave.getEnPassantTile();
+
+        for (GameSave.SavedPiece savedPiece : gameSave.getPieces()) {
+            Piece piece = createPiece(savedPiece.getName(), savedPiece.getCol(), savedPiece.getRow(), savedPiece.isWhite());
+            piece.isFirstMove = savedPiece.isFirstMove();
+            pieces.add(piece);
+        }
+    }
+
+    private Board(Color whitesqr, Color blacksqr, boolean rotateBoardEveryTurn, String gameName, File saveFile, boolean setupStartingPosition) {
         this.whitesqr = whitesqr;
         this.blacksqr = blacksqr;
+        this.rotateBoardEveryTurn = rotateBoardEveryTurn;
+        this.gameName = gameName;
+        this.saveFile = saveFile;
         this.setPreferredSize(new Dimension(cols * TILESIZE, rows * TILESIZE));
 
         addMouseListener(input);
         addMouseMotionListener(input);
 
-        this.setBoard();
+        if (setupStartingPosition) {
+            this.setBoard();
+        }
     }
 
     public Piece getPieceAt(int col, int row){
@@ -124,7 +163,7 @@ public class Board extends JPanel {
         for (int i = 0; i < rows; i++) {
             for (int j = 0; j < cols; j++) {
                 g2d.setColor((i+j) % 2 == 0 ? this.whitesqr : this.blacksqr);
-                g2d.fillRect(j * TILESIZE, i * TILESIZE, TILESIZE, TILESIZE);
+                g2d.fillRect(getVisualX(j), getVisualY(i), TILESIZE, TILESIZE);
             }
         }
 
@@ -136,7 +175,7 @@ public class Board extends JPanel {
 
                         g.setColor(validMoveColor);
 //                        g.fillRect(j * TILESIZE, i * TILESIZE, TILESIZE, TILESIZE);
-                        g.fillRoundRect(j * TILESIZE, i * TILESIZE, TILESIZE, TILESIZE, 5, 5);
+                        g.fillRoundRect(getVisualX(j), getVisualY(i), TILESIZE, TILESIZE, 5, 5);
                     }
 
                 }
@@ -144,9 +183,35 @@ public class Board extends JPanel {
         }
 
         for (Piece p : pieces) {
-            p.paint(g2d);
+            if (p == selectedPiece) {
+                p.paint(g2d);
+            } else {
+                g2d.drawImage(p.getSprite(), getVisualX(p.getCol()), getVisualY(p.getRow()), null);
+            }
         }
 
+    }
+
+    public int getBoardColFromMouseX(int mouseX) {
+        int col = mouseX / TILESIZE;
+        return isBoardFlipped() ? cols - 1 - col : col;
+    }
+
+    public int getBoardRowFromMouseY(int mouseY) {
+        int row = mouseY / TILESIZE;
+        return isBoardFlipped() ? rows - 1 - row : row;
+    }
+
+    public int getVisualX(int col) {
+        return (isBoardFlipped() ? cols - 1 - col : col) * TILESIZE;
+    }
+
+    public int getVisualY(int row) {
+        return (isBoardFlipped() ? rows - 1 - row : row) * TILESIZE;
+    }
+
+    private boolean isBoardFlipped() {
+        return rotateBoardEveryTurn && !isWhiteMove;
     }
 
     public boolean isValidMove(Move move) {
@@ -200,6 +265,7 @@ public class Board extends JPanel {
             isWhiteMove = !isWhiteMove;
 
             updateGameState();
+            saveGame();
 
     }
 
@@ -334,6 +400,38 @@ public class Board extends JPanel {
 
     public ArrayList<Piece> getPieces(){
         return pieces;
+    }
+
+    public void saveGame() {
+        if (saveFile == null || gameName == null) {
+            return;
+        }
+
+        List<GameSave.SavedPiece> savedPieces = pieces.stream()
+                .map(piece -> new GameSave.SavedPiece(piece.getName(), piece.getCol(), piece.getRow(), piece.isWhite(), piece.isFirstMove))
+                .collect(Collectors.toList());
+
+        SaveManager.save(new GameSave(gameName, whitesqr.getRGB(), blacksqr.getRGB(), rotateBoardEveryTurn,
+                isWhiteMove, isGameOver, getEnPassantTile, savedPieces), saveFile);
+    }
+
+    private Piece createPiece(String name, int col, int row, boolean white) {
+        switch (name) {
+            case "King":
+                return new King(this, col, row, white);
+            case "Queen":
+                return new Queen(this, col, row, white);
+            case "Rook":
+                return new Rook(this, col, row, white);
+            case "Bishop":
+                return new Bishop(this, col, row, white);
+            case "Knight":
+                return new Knight(this, col, row, white);
+            case "Pawn":
+                return new Pawn(this, col, row, white);
+            default:
+                throw new IllegalArgumentException("Unknown piece type: " + name);
+        }
     }
 
     public int getRows(){

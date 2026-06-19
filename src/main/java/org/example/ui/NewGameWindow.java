@@ -1,9 +1,11 @@
 package org.example.ui;
 
 import org.example.Board;
+import org.example.save.SaveManager;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.File;
 import java.util.Random;
 
 public class NewGameWindow extends JFrame {
@@ -12,6 +14,8 @@ public class NewGameWindow extends JFrame {
     private final String title;
     private final JTextField gameName = new JTextField(generateGameName(), 18);
     private final JPanel palettePanel = new JPanel(new GridLayout(1, 4, 14, 14));
+    private final JRadioButton onePlayerButton = new JRadioButton("1 Player", true);
+    private final JRadioButton twoPlayerButton = new JRadioButton("2 Players");
     private Color selectedWhiteSquare = Board.DEFAULT_WHITE_SQUARE;
     private Color selectedBlackSquare = Board.DEFAULT_BLACK_SQUARE;
     private PalettePreview selectedPalette;
@@ -63,6 +67,27 @@ public class NewGameWindow extends JFrame {
         gameName.setFont(new Font("SansSerif", Font.PLAIN, 18));
         gameName.setText(generateGameName());
         content.add(gameName, constraints);
+
+        JLabel playerModeLabel = new JLabel("Player mode");
+        playerModeLabel.setForeground(Color.WHITE);
+        playerModeLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
+        content.add(playerModeLabel, constraints);
+
+        JPanel playerModePanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 14, 0));
+        playerModePanel.setOpaque(false);
+
+        ButtonGroup playerModeGroup = new ButtonGroup();
+        playerModeGroup.add(onePlayerButton);
+        playerModeGroup.add(twoPlayerButton);
+
+        onePlayerButton.setOpaque(false);
+        onePlayerButton.setForeground(Color.WHITE);
+        twoPlayerButton.setOpaque(false);
+        twoPlayerButton.setForeground(Color.WHITE);
+
+        playerModePanel.add(onePlayerButton);
+        playerModePanel.add(twoPlayerButton);
+        content.add(playerModePanel, constraints);
 
         JLabel paletteLabel = new JLabel("Choose board colors");
         paletteLabel.setForeground(Color.WHITE);
@@ -138,7 +163,8 @@ public class NewGameWindow extends JFrame {
 
         JPanel boardPanel = new JPanel(new GridBagLayout());
         boardPanel.setBackground(Color.BLACK);
-        boardPanel.add(new Board(selectedWhiteSquare, selectedBlackSquare));
+        File saveFile = SaveManager.createSaveFile(name);
+        boardPanel.add(new Board(selectedWhiteSquare, selectedBlackSquare, twoPlayerButton.isSelected(), name, saveFile));
 
         gamePanel.add(topPanel, BorderLayout.NORTH);
         gamePanel.add(boardPanel, BorderLayout.CENTER);

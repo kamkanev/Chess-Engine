@@ -27,12 +27,14 @@ public class Input extends MouseAdapter {
     @Override
     public void mousePressed(MouseEvent e) {
 
-        int col = e.getX() / board.TILESIZE;
-        int row = e.getY() / board.TILESIZE;
+        int col = board.getBoardColFromMouseX(e.getX());
+        int row = board.getBoardRowFromMouseY(e.getY());
 
         Piece pieceXY = board.getPieceAt(col, row);
         if(pieceXY != null){
             board.selectedPiece = pieceXY;
+            board.selectedPiece.setxPos(board.getVisualX(board.selectedPiece.getCol()));
+            board.selectedPiece.setyPos(board.getVisualY(board.selectedPiece.getRow()));
         }
 
     }
@@ -40,8 +42,8 @@ public class Input extends MouseAdapter {
     @Override
     public void mouseReleased(MouseEvent e) {
 
-        int col = e.getX() / board.TILESIZE;
-        int row = e.getY() / board.TILESIZE;
+        int col = board.getBoardColFromMouseX(e.getX());
+        int row = board.getBoardRowFromMouseY(e.getY());
 
         if(board.selectedPiece != null){
             Move move = new Move(board, board.selectedPiece, col, row);
@@ -49,8 +51,8 @@ public class Input extends MouseAdapter {
             if(board.isValidMove(move)){
                 board.makeMove(move);
             }else{
-                board.selectedPiece.setxPos(board.selectedPiece.getCol() * board.TILESIZE);
-                board.selectedPiece.setyPos(board.selectedPiece.getRow() * board.TILESIZE);
+                board.selectedPiece.setxPos(board.getVisualX(board.selectedPiece.getCol()));
+                board.selectedPiece.setyPos(board.getVisualY(board.selectedPiece.getRow()));
             }
 
         }
