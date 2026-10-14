@@ -27,7 +27,7 @@ public class Pawn extends Piece {
             return true;
         }
 
-        if(isFirstMove && this.col == col && row == this.row - 2 * colorIdx && board.getPieceAt(col, row) == null && board.getPieceAt(col, row + colorIdx) == null) {
+        if(this.row == (isWhite ? 6 : 1) && this.col == col && row == this.row - 2 * colorIdx && board.getPieceAt(col, row) == null && board.getPieceAt(col, row + colorIdx) == null) {
             return true;
         }
 

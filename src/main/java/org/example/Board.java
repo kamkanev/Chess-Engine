@@ -30,6 +30,8 @@ public class Board extends JPanel {
 
     private int getEnPassantTile = -1;
 
+    private String fenStartingPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     private boolean isWhiteMove = true;
     private boolean isGameOver = false;
     private boolean rotateBoardEveryTurn = false;
@@ -83,7 +85,8 @@ public class Board extends JPanel {
         addMouseMotionListener(input);
 
         if (setupStartingPosition) {
-            this.setBoard();
+//            this.setBoard();
+            loadPositionFromFEN(fenStartingPosition);
         }
     }
 
@@ -115,6 +118,82 @@ public class Board extends JPanel {
         return row * rows + col;
     }
 
+    public void loadPositionFromFEN(String fenString){
+        pieces.clear();
+
+        String[] parts = fenString.split(" ");
+
+        //set board
+        String position = parts[0];
+        int row = 0;
+        int col = 0;
+        for (int i = 0; i < position.length(); i++){
+            char ch = position.charAt(i);
+            if(ch == '/'){
+                row++;
+                col = 0;
+            }else if(Character.isDigit(ch)){
+                col += Character.getNumericValue(ch);
+            }else{
+                boolean isWhite = Character.isUpperCase(ch);
+                char pieceChar = Character.toLowerCase(ch);
+
+                switch (pieceChar){
+                    case 'r':
+                        pieces.add(new Rook(this, col, row, isWhite));
+                        break;
+                    case 'n':
+                        pieces.add(new Knight(this, col, row, isWhite));
+                        break;
+                    case 'b':
+                        pieces.add(new Bishop(this, col, row, isWhite));
+                        break;
+                    case 'q':
+                        pieces.add(new Queen(this, col, row, isWhite));
+                        break;
+                    case 'k':
+                        pieces.add(new King(this, col, row, isWhite));
+                        break;
+                    case 'p':
+                        pieces.add(new Pawn(this, col, row, isWhite));
+                        break;
+                }
+                col++;
+            }
+        }
+
+        //whose move
+        isWhiteMove = parts[1].equals("w");
+
+        //castling
+        Piece bqr = getPieceAt(0, 0);
+        if(bqr instanceof Rook){
+            bqr.isFirstMove = parts[2].contains("q");
+        }
+
+        Piece bkr = getPieceAt(7, 0);
+        if(bkr instanceof Rook){
+            bkr.isFirstMove = parts[2].contains("k");
+        }
+
+        Piece wqr = getPieceAt(0, 7);
+        if(wqr instanceof Rook){
+            wqr.isFirstMove = parts[2].contains("Q");
+        }
+
+        Piece wkr = getPieceAt(7, 7);
+        if(wkr instanceof Rook){
+            wkr.isFirstMove = parts[2].contains("K");
+        }
+
+        //en passant sq
+        if(parts[3].equals("-")){
+            getEnPassantTile = -1;
+        }else{
+            getEnPassantTile = (7 - (parts[3].charAt(1) - '1')) * 8 + (parts[3].charAt(0) - 'a');
+        }
+
+    }
     public void setBoard(){
 
         //Black side set
@@ -247,10 +326,12 @@ public class Board extends JPanel {
 
         if(move.piece.getName().equals("Pawn")){
             movePawn(move);
-        } else if (move.piece.getName().equals("King")) {
+        }else{
+            getEnPassantTile = -1;
+        }
 
+        if (move.piece.getName().equals("King")) {
             moveKing(move);
-
         }
 
             move.piece.setCol(move.newCol);
