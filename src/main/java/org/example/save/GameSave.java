@@ -16,9 +16,54 @@ public class GameSave implements Serializable {
     private final boolean gameOver;
     private final int enPassantTile;
     private final List<SavedPiece> pieces;
+    private final Boolean surrenderedWhite;
+    private final Boolean humanPlaysWhite;
+    private final Integer stockfishLevel;
+    private final boolean playAgainstStockfish;
+    private final String stockfishExecutable;
+    private final int halfmoveClock;
+    private final int fullmoveNumber;
 
     public GameSave(String gameName, int whiteSquareRgb, int blackSquareRgb, boolean rotateBoardEveryTurn,
                     boolean whiteMove, boolean gameOver, int enPassantTile, List<SavedPiece> pieces) {
+        this(gameName, whiteSquareRgb, blackSquareRgb, rotateBoardEveryTurn, whiteMove, gameOver,
+                enPassantTile, pieces, 0, 1);
+    }
+
+    public GameSave(String gameName, int whiteSquareRgb, int blackSquareRgb, boolean rotateBoardEveryTurn,
+                    boolean whiteMove, boolean gameOver, int enPassantTile, List<SavedPiece> pieces,
+                    int halfmoveClock, int fullmoveNumber) {
+        this(gameName, whiteSquareRgb, blackSquareRgb, rotateBoardEveryTurn, whiteMove, gameOver,
+                enPassantTile, pieces, halfmoveClock, fullmoveNumber, false, null);
+    }
+
+    public GameSave(String gameName, int whiteSquareRgb, int blackSquareRgb, boolean rotateBoardEveryTurn,
+                    boolean whiteMove, boolean gameOver, int enPassantTile, List<SavedPiece> pieces,
+                    int halfmoveClock, int fullmoveNumber, boolean playAgainstStockfish, String stockfishExecutable) {
+        this(gameName, whiteSquareRgb, blackSquareRgb, rotateBoardEveryTurn, whiteMove, gameOver,
+                enPassantTile, pieces, halfmoveClock, fullmoveNumber, playAgainstStockfish, stockfishExecutable, true, 20);
+    }
+
+    public GameSave(String gameName, int whiteSquareRgb, int blackSquareRgb, boolean rotateBoardEveryTurn,
+                    boolean whiteMove, boolean gameOver, int enPassantTile, List<SavedPiece> pieces,
+                    int halfmoveClock, int fullmoveNumber, boolean playAgainstStockfish, String stockfishExecutable,
+                    boolean humanPlaysWhite, int stockfishLevel) {
+        this(gameName, whiteSquareRgb, blackSquareRgb, rotateBoardEveryTurn, whiteMove, gameOver,
+                enPassantTile, pieces, halfmoveClock, fullmoveNumber, playAgainstStockfish, stockfishExecutable,
+                humanPlaysWhite, stockfishLevel, null);
+    }
+
+    public GameSave(String gameName, int whiteSquareRgb, int blackSquareRgb, boolean rotateBoardEveryTurn,
+                    boolean whiteMove, boolean gameOver, int enPassantTile, List<SavedPiece> pieces,
+                    int halfmoveClock, int fullmoveNumber, boolean playAgainstStockfish, String stockfishExecutable,
+                    boolean humanPlaysWhite, int stockfishLevel, Boolean surrenderedWhite) {
+        this.surrenderedWhite = surrenderedWhite;
+        this.humanPlaysWhite = humanPlaysWhite;
+        this.stockfishLevel = stockfishLevel;
+        this.playAgainstStockfish = playAgainstStockfish;
+        this.stockfishExecutable = stockfishExecutable;
+        this.halfmoveClock = halfmoveClock;
+        this.fullmoveNumber = fullmoveNumber;
         this.gameName = gameName;
         this.whiteSquareRgb = whiteSquareRgb;
         this.blackSquareRgb = blackSquareRgb;
@@ -27,6 +72,36 @@ public class GameSave implements Serializable {
         this.gameOver = gameOver;
         this.enPassantTile = enPassantTile;
         this.pieces = new ArrayList<>(pieces);
+    }
+
+    public Boolean getSurrenderedWhite() {
+        return surrenderedWhite;
+    }
+
+    public boolean isHumanPlaysWhite() {
+        // Missing fields in older saves preserve the original White / level 20 defaults.
+        return humanPlaysWhite == null || humanPlaysWhite;
+    }
+
+    public int getStockfishLevel() {
+        return stockfishLevel == null ? 20 : stockfishLevel;
+    }
+
+    public boolean isPlayAgainstStockfish() {
+        return playAgainstStockfish;
+    }
+
+    public String getStockfishExecutable() {
+        return stockfishExecutable;
+    }
+
+    public int getHalfmoveClock() {
+        return halfmoveClock;
+    }
+
+    public int getFullmoveNumber() {
+        // Older serialized saves have zero for this newly added field.
+        return Math.max(1, fullmoveNumber);
     }
 
     public String getGameName() {

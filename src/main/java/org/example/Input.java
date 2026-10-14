@@ -26,6 +26,7 @@ public class Input extends MouseAdapter {
 
     @Override
     public void mousePressed(MouseEvent e) {
+        if (!board.canHumanMove()) return;
 
         int col = board.getBoardColFromMouseX(e.getX());
         int row = board.getBoardRowFromMouseY(e.getY());
@@ -41,6 +42,10 @@ public class Input extends MouseAdapter {
 
     @Override
     public void mouseReleased(MouseEvent e) {
+        if (!board.canHumanMove()) {
+            board.selectedPiece = null;
+            return;
+        }
 
         int col = board.getBoardColFromMouseX(e.getX());
         int row = board.getBoardRowFromMouseY(e.getY());

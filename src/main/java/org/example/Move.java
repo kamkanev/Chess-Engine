@@ -11,6 +11,7 @@ public class Move {
 
     Piece piece;
     Piece capture;
+    char promotion;
 
     public Move(Board board, Piece piece, int newCol, int newRow) {
 

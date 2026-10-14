@@ -32,8 +32,19 @@ public class Board extends JPanel {
 
     private String fenStartingPosition = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
+    private boolean playAgainstStockfish;
+    private boolean humanPlaysWhite = true;
+    private int stockfishLevel = 20;
+    private String stockfishExecutable = StockfishEngine.defaultExecutable();
+    private SwingWorker<String, Void> engineWorker;
+    private long positionVersion;
+
+    private int halfmoveClock = 0;
+    private int fullmoveNumber = 1;
+
     private boolean isWhiteMove = true;
     private boolean isGameOver = false;
+    private Boolean surrenderedWhite;
     private boolean rotateBoardEveryTurn = false;
     private String gameName;
     private File saveFile;
@@ -64,7 +75,14 @@ public class Board extends JPanel {
                 gameSave.isRotateBoardEveryTurn(), gameSave.getGameName(), saveFile, false);
         this.isWhiteMove = gameSave.isWhiteMove();
         this.isGameOver = gameSave.isGameOver();
+        this.surrenderedWhite = gameSave.getSurrenderedWhite();
         this.getEnPassantTile = gameSave.getEnPassantTile();
+        this.halfmoveClock = gameSave.getHalfmoveClock();
+        this.fullmoveNumber = gameSave.getFullmoveNumber();
+        this.playAgainstStockfish = gameSave.isPlayAgainstStockfish();
+        this.humanPlaysWhite = gameSave.isHumanPlaysWhite();
+        this.stockfishLevel = gameSave.getStockfishLevel();
+        if (gameSave.getStockfishExecutable() != null) this.stockfishExecutable = gameSave.getStockfishExecutable();
 
         for (GameSave.SavedPiece savedPiece : gameSave.getPieces()) {
             Piece piece = createPiece(savedPiece.getName(), savedPiece.getCol(), savedPiece.getRow(), savedPiece.isWhite());
@@ -119,9 +137,23 @@ public class Board extends JPanel {
     }
 
     public void loadPositionFromFEN(String fenString){
+        cancelEngineMove();
+        positionVersion++;
+        String[] parts = fenString.trim().split("\\s+");
+        if (parts.length != 6) {
+            throw new IllegalArgumentException("FEN must contain six fields");
+        }
+        int loadedHalfmoveClock = Integer.parseInt(parts[4]);
+        int loadedFullmoveNumber = Integer.parseInt(parts[5]);
+        if (loadedHalfmoveClock < 0 || loadedFullmoveNumber < 1) {
+            throw new IllegalArgumentException("Invalid FEN move counters");
+        }
         pieces.clear();
-
-        String[] parts = fenString.split(" ");
+        selectedPiece = null;
+        halfmoveClock = loadedHalfmoveClock;
+        fullmoveNumber = loadedFullmoveNumber;
+        isGameOver = halfmoveClock >= 100;
+        surrenderedWhite = null;
 
         //set board
         String position = parts[0];
@@ -165,6 +197,19 @@ public class Board extends JPanel {
         //whose move
         isWhiteMove = parts[1].equals("w");
 
+        // FEN castling rights are the only evidence that a king or rook has not moved.
+        for (Piece piece : pieces) {
+            piece.isFirstMove = piece instanceof Pawn && piece.getRow() == (piece.isWhite() ? 6 : 1);
+        }
+        Piece whiteKing = getPieceAt(4, 7);
+        if (whiteKing instanceof King && whiteKing.isWhite()) {
+            whiteKing.isFirstMove = parts[2].contains("K") || parts[2].contains("Q");
+        }
+        Piece blackKing = getPieceAt(4, 0);
+        if (blackKing instanceof King && !blackKing.isWhite()) {
+            blackKing.isFirstMove = parts[2].contains("k") || parts[2].contains("q");
+        }
+
         //castling
         Piece bqr = getPieceAt(0, 0);
         if(bqr instanceof Rook){
@@ -194,6 +239,190 @@ public class Board extends JPanel {
         }
 
     }
+    /** Returns the current position in the six-field format accepted by chess engines. */
+    public String getFenString() {
+        StringBuilder fen = new StringBuilder();
+        for (int row = 0; row < rows; row++) {
+            int empty = 0;
+            for (int col = 0; col < cols; col++) {
+                Piece piece = getPieceAt(col, row);
+                if (piece == null) {
+                    empty++;
+                } else {
+                    if (empty > 0) {
+                        fen.append(empty);
+                        empty = 0;
+                    }
+                    char symbol = piece.getName().equals("Knight") ? 'n'
+                            : Character.toLowerCase(piece.getName().charAt(0));
+                    fen.append(piece.isWhite() ? Character.toUpperCase(symbol) : symbol);
+                }
+            }
+            if (empty > 0) fen.append(empty);
+            if (row < rows - 1) fen.append('/');
+        }
+        fen.append(isWhiteMove ? " w " : " b ");
+        StringBuilder castling = new StringBuilder();
+        if (hasCastlingRight(true, 7)) castling.append('K');
+        if (hasCastlingRight(true, 0)) castling.append('Q');
+        if (hasCastlingRight(false, 7)) castling.append('k');
+        if (hasCastlingRight(false, 0)) castling.append('q');
+        fen.append(castling.length() == 0 ? "-" : castling).append(' ');
+        if (getEnPassantTile == -1) {
+            fen.append('-');
+        } else {
+            fen.append((char) ('a' + getEnPassantTile % 8));
+            fen.append(8 - getEnPassantTile / 8);
+        }
+        return fen.append(' ').append(halfmoveClock).append(' ').append(fullmoveNumber).toString();
+    }
+
+    private boolean hasCastlingRight(boolean white, int rookCol) {
+        int row = white ? 7 : 0;
+        Piece king = getPieceAt(4, row);
+        Piece rook = getPieceAt(rookCol, row);
+        return king instanceof King && king.isWhite() == white && king.isFirstMove
+                && rook instanceof Rook && rook.isWhite() == white && rook.isFirstMove;
+    }
+
+    public int getHalfmoveClock() {
+        return halfmoveClock;
+    }
+
+    public int getFullmoveNumber() {
+        return fullmoveNumber;
+    }
+
+    public boolean isGameOver() {
+        return isGameOver;
+    }
+
+    public String getSurrenderingPlayerName() {
+        boolean white = playAgainstStockfish ? humanPlaysWhite : isWhiteMove;
+        return white ? "White" : "Black";
+    }
+
+    public Boolean getSurrenderedWhite() {
+        return surrenderedWhite;
+    }
+
+    /** The human resigns against Stockfish; otherwise the side to move resigns. */
+    public boolean surrender() {
+        if (isGameOver) return false;
+        surrenderedWhite = playAgainstStockfish ? humanPlaysWhite : isWhiteMove;
+        isGameOver = true;
+        positionVersion++;
+        cancelEngineMove();
+        selectedPiece = null;
+        saveGame();
+        repaint();
+        return true;
+    }
+
+    public String getSurrenderResultTitle() {
+        if (surrenderedWhite == null) throw new IllegalStateException("No surrender result");
+        return playAgainstStockfish ? "You lost — Stockfish wins"
+                : (surrenderedWhite ? "Black wins" : "White wins");
+    }
+
+    public String getSurrenderResultDetail() {
+        if (surrenderedWhite == null) throw new IllegalStateException("No surrender result");
+        return (surrenderedWhite ? "White" : "Black") + " surrendered.";
+    }
+
+    public void enableStockfish(String executable) {
+        enableStockfish(executable, true, 20);
+    }
+
+    public void enableStockfish(String executable, boolean humanPlaysWhite, int level) {
+        if (level < 0 || level > 20) throw new IllegalArgumentException("Stockfish level must be 0–20");
+        cancelEngineMove();
+        positionVersion++;
+        this.humanPlaysWhite = humanPlaysWhite;
+        this.stockfishLevel = level;
+        playAgainstStockfish = true;
+        stockfishExecutable = executable;
+        saveGame();
+        requestEngineMove();
+    }
+
+    public boolean canHumanMove() {
+        return !isGameOver && (!playAgainstStockfish || isWhiteMove == humanPlaysWhite);
+    }
+
+    @Override
+    public void addNotify() {
+        super.addNotify();
+        requestEngineMove();
+    }
+
+    @Override
+    public void removeNotify() {
+        cancelEngineMove();
+        super.removeNotify();
+    }
+
+    private void cancelEngineMove() {
+        if (engineWorker != null) {
+            engineWorker.cancel(true);
+            engineWorker = null;
+        }
+    }
+
+    private void requestEngineMove() {
+        if (!playAgainstStockfish || isWhiteMove == humanPlaysWhite || isGameOver || engineWorker != null || !isDisplayable()) return;
+        String fen = getFenString();
+        long version = positionVersion;
+        String executable = stockfishExecutable;
+        int level = stockfishLevel;
+        engineWorker = new SwingWorker<String, Void>() {
+            @Override
+            protected String doInBackground() throws Exception {
+                return StockfishEngine.bestMove(executable, fen, level);
+            }
+
+            @Override
+            protected void done() {
+                if (engineWorker != this) return;
+                engineWorker = null;
+                if (isCancelled() || version != positionVersion || !isDisplayable()) return;
+                try {
+                    applyEngineMove(get());
+                } catch (Exception error) {
+                    Throwable cause = error.getCause() == null ? error : error.getCause();
+                    JOptionPane.showMessageDialog(Board.this,
+                            "Stockfish could not make a move: " + cause.getMessage()
+                                    + "\nCheck the executable path and reload the game to retry.",
+                            "Stockfish", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+        engineWorker.execute();
+    }
+
+    void applyEngineMove(String uci) {
+        if (uci == null || !uci.matches("[a-h][1-8][a-h][1-8][qrbn]?")) {
+            throw new IllegalArgumentException("Invalid engine move: " + uci);
+        }
+        Piece piece = getPieceAt(uci.charAt(0) - 'a', 8 - (uci.charAt(1) - '0'));
+        if (piece == null) throw new IllegalArgumentException("Engine move has no source piece");
+        Move move = new Move(this, piece, uci.charAt(2) - 'a', 8 - (uci.charAt(3) - '0'));
+        if (piece instanceof Pawn && (move.newRow == 0 || move.newRow == 7)) {
+            if (uci.length() != 5) throw new IllegalArgumentException("Missing promotion piece");
+            move.promotion = uci.charAt(4);
+        } else if (uci.length() == 5) {
+            throw new IllegalArgumentException("Unexpected promotion piece");
+        }
+        selectedPiece = piece;
+        try {
+            if (!isValidMove(move)) throw new IllegalArgumentException("Illegal engine move: " + uci);
+            makeMove(move);
+        } finally {
+            selectedPiece = null;
+            repaint();
+        }
+    }
+
     public void setBoard(){
 
         //Black side set
@@ -261,6 +490,9 @@ public class Board extends JPanel {
             }
         }
 
+        paintCheckGlow(g2d, true);
+        paintCheckGlow(g2d, false);
+
         for (Piece p : pieces) {
             if (p == selectedPiece) {
                 p.paint(g2d);
@@ -269,6 +501,25 @@ public class Board extends JPanel {
             }
         }
 
+    }
+
+    private void paintCheckGlow(Graphics2D graphics, boolean white) {
+        Piece king = findKing(white);
+        if (king == null || !checkScanner.isKingInCheck(white)) return;
+        float centerX = getVisualX(king.getCol()) + TILESIZE / 2f;
+        float centerY = getVisualY(king.getRow()) + TILESIZE / 2f;
+        float radius = TILESIZE * 0.6f;
+        Graphics2D glow = (Graphics2D) graphics.create();
+        try {
+            glow.setPaint(new RadialGradientPaint(centerX, centerY, radius,
+                    new float[]{0f, 0.55f, 1f},
+                    new Color[]{new Color(235, 35, 35, 200), new Color(235, 35, 35, 130),
+                            new Color(235, 35, 35, 0)}));
+            glow.fillRect((int) (centerX - radius), (int) (centerY - radius),
+                    (int) Math.ceil(radius * 2), (int) Math.ceil(radius * 2));
+        } finally {
+            glow.dispose();
+        }
     }
 
     public int getBoardColFromMouseX(int mouseX) {
@@ -290,7 +541,7 @@ public class Board extends JPanel {
     }
 
     private boolean isBoardFlipped() {
-        return rotateBoardEveryTurn && !isWhiteMove;
+        return playAgainstStockfish ? !humanPlaysWhite : rotateBoardEveryTurn && !isWhiteMove;
     }
 
     public boolean isValidMove(Move move) {
@@ -324,6 +575,9 @@ public class Board extends JPanel {
 
     public void makeMove(Move move) {
 
+        if (isGameOver) return;
+        boolean pawnMove = move.piece instanceof Pawn;
+
         if(move.piece.getName().equals("Pawn")){
             movePawn(move);
         }else{
@@ -343,10 +597,14 @@ public class Board extends JPanel {
 
             capture(move.capture);
 
+            halfmoveClock = pawnMove || move.capture != null ? 0 : halfmoveClock + 1;
+            if (!isWhiteMove) fullmoveNumber++;
             isWhiteMove = !isWhiteMove;
 
             updateGameState();
             saveGame();
+            positionVersion++;
+            requestEngineMove();
 
     }
 
@@ -362,6 +620,9 @@ public class Board extends JPanel {
                 System.out.println("Stalemate");
                 isGameOver = true;
             }
+        } else if (halfmoveClock >= 100) {
+            System.out.println("Draw by fifty-move rule");
+            isGameOver = true;
         } else if(insuffiantMaterial(true) && insuffiantMaterial(false)) {
             System.out.println("Stalemate");
             System.out.println("Insufficient Material");
@@ -419,13 +680,29 @@ public class Board extends JPanel {
             }
 
             rook.setxPos(rook.getCol() * TILESIZE);
+            rook.isFirstMove = false;
 
         }
 
     }
 
     private void promotePawn(Move move) {
-        pieces.add(choosePromotionPiece(move));
+        Piece promotedPiece;
+        if (move.promotion != '\0') {
+            String name;
+            switch (move.promotion) {
+                case 'q': name = "Queen"; break;
+                case 'r': name = "Rook"; break;
+                case 'b': name = "Bishop"; break;
+                case 'n': name = "Knight"; break;
+                default: throw new IllegalArgumentException("Invalid promotion piece");
+            }
+            promotedPiece = createPiece(name, move.newCol, move.newRow, move.piece.isWhite());
+        } else {
+            promotedPiece = choosePromotionPiece(move);
+        }
+        promotedPiece.isFirstMove = false;
+        pieces.add(promotedPiece);
 
         capture(move.piece);
     }
@@ -493,7 +770,7 @@ public class Board extends JPanel {
                 .collect(Collectors.toList());
 
         SaveManager.save(new GameSave(gameName, whitesqr.getRGB(), blacksqr.getRGB(), rotateBoardEveryTurn,
-                isWhiteMove, isGameOver, getEnPassantTile, savedPieces), saveFile);
+                isWhiteMove, isGameOver, getEnPassantTile, savedPieces, halfmoveClock, fullmoveNumber, playAgainstStockfish, stockfishExecutable, humanPlaysWhite, stockfishLevel, surrenderedWhite), saveFile);
     }
 
     private Piece createPiece(String name, int col, int row, boolean white) {

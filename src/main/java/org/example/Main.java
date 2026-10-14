@@ -18,15 +18,17 @@ public class Main {
 
     public static void main(String[] args) {
 
-        StartMenu stWin = new StartMenu(TITLE, SUBTITLE, windows);
+        SwingUtilities.invokeLater(() -> {
+            StartMenu stWin = new StartMenu(TITLE, SUBTITLE, windows);
 
-        NewGameWindow newGame = new NewGameWindow(TITLE, stWin);
-        LoadGameWindow laodGame = new LoadGameWindow(stWin);
+            NewGameWindow newGame = new NewGameWindow(TITLE, stWin);
+            LoadGameWindow laodGame = new LoadGameWindow(stWin);
 
-        windows.put("new game", newGame);
-        windows.put("load game", laodGame);
+            windows.put("new game", newGame);
+            windows.put("load game", laodGame);
 
-        stWin.setVisible(true);
+            stWin.setVisible(true);
+        });
 
 //        Chess og
 //        JFrame frame = new JFrame(TITLE);

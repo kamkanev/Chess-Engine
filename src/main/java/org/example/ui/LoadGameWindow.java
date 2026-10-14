@@ -82,17 +82,45 @@ public class LoadGameWindow extends JFrame {
 
         for (File saveFile : saveFiles) {
             GameSave gameSave = SaveManager.load(saveFile);
-            listPanel.add(createGameButton(saveFile, gameSave));
+            JPanel row = new JPanel(new BorderLayout(8, 0));
+            row.setOpaque(false);
+            row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 82));
+            row.setPreferredSize(new Dimension(600, 82));
+            row.setAlignmentX(Component.LEFT_ALIGNMENT);
+            row.add(createGameButton(saveFile, gameSave), BorderLayout.CENTER);
+            JButton deleteButton = new JButton("Delete");
+            deleteButton.setToolTipText("Delete " + gameSave.getGameName());
+            deleteButton.addActionListener(event -> deleteSavedGame(saveFile, gameSave.getGameName()));
+            row.add(deleteButton, BorderLayout.EAST);
+            listPanel.add(row);
             listPanel.add(Box.createVerticalStrut(8));
+        }
+    }
+
+    private void deleteSavedGame(File saveFile, String gameName) {
+        int answer = JOptionPane.showConfirmDialog(this,
+                "Delete \"" + gameName + "\"? This cannot be undone.",
+                "Delete saved game", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (answer != JOptionPane.YES_OPTION) return;
+        try {
+            SaveManager.delete(saveFile);
+            showLoadList();
+        } catch (IllegalStateException error) {
+            JOptionPane.showMessageDialog(this, error.getMessage(), "Could not delete game", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private JButton createGameButton(File saveFile, GameSave gameSave) {
         String modifiedDate = new SimpleDateFormat("yyyy-MM-dd HH:mm").format(saveFile.lastModified());
-        String playerMode = gameSave.isRotateBoardEveryTurn() ? "2 Players" : "1 Player";
+        String playerMode = gameSave.isPlayAgainstStockfish()
+                ? "1 Player · You: " + (gameSave.isHumanPlaysWhite() ? "White" : "Black")
+                    + " · Stockfish level " + gameSave.getStockfishLevel()
+                : "2 Players";
 
         JButton button = new JButton("<html><b>" + gameSave.getGameName() + "</b><br>"
-                + playerMode + " · " + (gameSave.isWhiteMove() ? "White" : "Black") + " to move"
+                + playerMode + " · " + (gameSave.getSurrenderedWhite() != null
+                    ? (gameSave.getSurrenderedWhite() ? "Black wins" : "White wins") + " by surrender"
+                    : (gameSave.isWhiteMove() ? "White" : "Black") + " to move")
                 + "<br>Saved: " + modifiedDate + "</html>");
         button.setHorizontalAlignment(SwingConstants.LEFT);
         button.setMaximumSize(new Dimension(Integer.MAX_VALUE, 72));
@@ -104,6 +132,11 @@ public class LoadGameWindow extends JFrame {
     private void openSavedGame(File saveFile) {
         GameSave gameSave = SaveManager.load(saveFile);
         setTitle("Chess - " + gameSave.getGameName());
+        Board board = new Board(gameSave, saveFile);
+        if (board.getSurrenderedWhite() != null) {
+            GameResultScreen.show(this, board, this::goBackToMainMenu);
+            return;
+        }
 
         JPanel gamePanel = new JPanel(new BorderLayout());
         gamePanel.setBackground(Color.BLACK);
@@ -114,10 +147,18 @@ public class LoadGameWindow extends JFrame {
         JButton backButton = new JButton("Back to Menu");
         backButton.addActionListener(e -> goBackToMainMenu());
         topPanel.add(backButton);
+        if (gameSave.isPlayAgainstStockfish()) {
+            JLabel opponent = new JLabel("You: " + (gameSave.isHumanPlaysWhite() ? "White" : "Black")
+                    + " · Stockfish level " + gameSave.getStockfishLevel());
+            opponent.setForeground(Color.WHITE);
+            topPanel.add(opponent);
+        }
 
         JPanel boardPanel = new JPanel(new GridBagLayout());
         boardPanel.setBackground(Color.BLACK);
-        boardPanel.add(new Board(gameSave, saveFile));
+        topPanel.add(GameResultScreen.createSurrenderButton(board, this,
+                () -> GameResultScreen.show(this, board, this::goBackToMainMenu)));
+        boardPanel.add(board);
 
         gamePanel.add(topPanel, BorderLayout.NORTH);
         gamePanel.add(boardPanel, BorderLayout.CENTER);

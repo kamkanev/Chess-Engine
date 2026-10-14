@@ -84,6 +84,10 @@ Option 2 (IDE):
 - Drag to move it.
 - Release mouse to drop.
 - If the move is illegal, the piece snaps back.
+- Click **Surrender** and confirm to concede. Against Stockfish, the human loses;
+  in two-player mode, the side to move loses. Declining keeps the game going.
+- The result screen shows the winner and offers **Back to Menu**. Surrender
+  results are saved and shown again when the game is loaded.
 
 ## Assets
 
@@ -99,3 +103,43 @@ Option 2 (IDE):
 
 - Review and fix other gameplay/rules bugs found during move-validation and check-detection testing.
 - Add GUI promotion selection (let the player choose promoted piece type instead of auto-promoting).
+
+## Play against Stockfish
+
+Download and extract a Stockfish executable for your operating system from
+https://stockfishchess.org/download/ (on Linux, ensure the file is executable).
+Run the app, select **1 Player**, and enter the full path to the executable in
+**Stockfish executable**. If Stockfish is on your PATH, `stockfish` is sufficient.
+Choose a piece tile for **White** (white king and queen), **Black** (black king
+and queen), or **Random** (white king and black queen), then choose a **Stockfish level** from
+0 (easiest) to 20 (strongest). Stockfish thinks for about one second per move.
+When you play Black, the board flips and Stockfish makes the opening move.
+Random assigns your color once when the game starts.
+**2 Players** continues to support local play.
+
+The default executable can also be configured with the `STOCKFISH_PATH`
+environment variable or the Java VM option `-Dstockfish.path=/path/to/stockfish`.
+Saved games retain the opponent mode, assigned player color, level, and executable
+path. Loading a computer game on Stockfish's turn requests its next move automatically. Leaving the board
+cancels any pending engine search.
+
+The app communicates using UCI, sends `board.getFenString()` as the current
+position, and applies the returned move through the board's normal move handling.
+Stockfish runs outside Swing's UI thread. The extracted Linux executable at
+`stockfish/stockfish-linux-x86-64-universal` is detected automatically when you run
+the app from the project directory. Explicit environment or VM settings take
+precedence over this detection. Java starts the executable with `ProcessBuilder`,
+sends the current FEN and selected UCI `Skill Level`, then reads `bestmove`; you
+do not need to start Stockfish manually.
+
+For tests in an environment without a display:
+
+```bash
+mvn -Djava.awt.headless=true test
+```
+
+## Delete saved games
+
+In **Load Game**, each saved game has its own **Delete** button. Confirm to
+permanently remove that game; the list refreshes immediately. Declining or
+closing the confirmation keeps the save.

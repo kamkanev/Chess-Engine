@@ -23,21 +23,30 @@ public class CheckScanner {
             kingRow = move.newRow;
         }
 
-        return hitByRook(move.newCol, move.newRow, king, kingCol, kingRow, 0, 1) ||
-                hitByRook(move.newCol, move.newRow, king, kingCol, kingRow, 1, 0) ||
-                hitByRook(move.newCol, move.newRow, king, kingCol, kingRow, 0, -1) ||
-                hitByRook(move.newCol, move.newRow, king, kingCol, kingRow, -1, 0) ||
-                hitByBishop(move.newCol, move.newRow, king, kingCol, kingRow, 1, 1) ||
-                hitByBishop(move.newCol, move.newRow, king, kingCol, kingRow, 1, -1) ||
-                hitByBishop(move.newCol, move.newRow, king, kingCol, kingRow, -1, 1) ||
-                hitByBishop(move.newCol, move.newRow, king, kingCol, kingRow, -1, -1) ||
-                hitByKnight(move.newCol, move.newRow, king, kingCol, kingRow) ||
-                hitByPawn(move.newCol, move.newRow, king, kingCol, kingRow) ||
-                hitByKing(king, kingCol, kingRow);
-
+        return isKingAttacked(move.newCol, move.newRow, king, kingCol, kingRow, board.selectedPiece);
     }
 
-    private boolean hitByRook(int col, int row, Piece king, int kingCol, int kingRow, int colVal, int rowVal){
+    /** Checks the actual position, regardless of which piece is selected or being dragged. */
+    public boolean isKingInCheck(boolean white) {
+        Piece king = board.findKing(white);
+        return king != null && isKingAttacked(-1, -1, king, king.getCol(), king.getRow(), null);
+    }
+
+    private boolean isKingAttacked(int col, int row, Piece king, int kingCol, int kingRow, Piece ignoredPiece) {
+        return hitByRook(col, row, king, kingCol, kingRow, 0, 1, ignoredPiece) ||
+                hitByRook(col, row, king, kingCol, kingRow, 1, 0, ignoredPiece) ||
+                hitByRook(col, row, king, kingCol, kingRow, 0, -1, ignoredPiece) ||
+                hitByRook(col, row, king, kingCol, kingRow, -1, 0, ignoredPiece) ||
+                hitByBishop(col, row, king, kingCol, kingRow, 1, 1, ignoredPiece) ||
+                hitByBishop(col, row, king, kingCol, kingRow, 1, -1, ignoredPiece) ||
+                hitByBishop(col, row, king, kingCol, kingRow, -1, 1, ignoredPiece) ||
+                hitByBishop(col, row, king, kingCol, kingRow, -1, -1, ignoredPiece) ||
+                hitByKnight(col, row, king, kingCol, kingRow) ||
+                hitByPawn(col, row, king, kingCol, kingRow) ||
+                hitByKing(king, kingCol, kingRow);
+    }
+
+    private boolean hitByRook(int col, int row, Piece king, int kingCol, int kingRow, int colVal, int rowVal, Piece ignoredPiece){
 
         for(int i = 1; i < 8; i++) {
             if (kingCol + (i * colVal) == col && kingRow + (i * rowVal) == row) {
@@ -46,7 +55,7 @@ public class CheckScanner {
 
 
             Piece piece = board.getPieceAt(kingCol + (i * colVal), kingRow + (i * rowVal));
-            if (piece != null && piece != board.selectedPiece) {
+            if (piece != null && piece != ignoredPiece) {
                 if(!board.sameTeam(piece, king) && (piece.getName().equals("Rook") || piece.getName().equals("Queen"))){
                     return true;
                 }
@@ -57,7 +66,7 @@ public class CheckScanner {
         return false;
     }
 
-    private boolean hitByBishop(int col, int row, Piece king, int kingCol, int kingRow, int colVal, int rowVal){
+    private boolean hitByBishop(int col, int row, Piece king, int kingCol, int kingRow, int colVal, int rowVal, Piece ignoredPiece){
 
         for(int i = 1; i < 8; i++) {
             if (kingCol - (i * colVal) == col && kingRow - (i * rowVal) == row) {
@@ -66,7 +75,7 @@ public class CheckScanner {
 
 
             Piece piece = board.getPieceAt(kingCol - (i * colVal), kingRow - (i * rowVal));
-            if (piece != null && piece != board.selectedPiece) {
+            if (piece != null && piece != ignoredPiece) {
                 if(!board.sameTeam(piece, king) && (piece.getName().equals("Bishop") || piece.getName().equals("Queen"))){
                     return true;
                 }

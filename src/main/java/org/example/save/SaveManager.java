@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -45,6 +46,17 @@ public final class SaveManager {
             return (GameSave) input.readObject();
         } catch (IOException | ClassNotFoundException e) {
             throw new IllegalStateException("Could not load game: " + saveFile.getAbsolutePath(), e);
+        }
+    }
+
+    public static void delete(File saveFile) {
+        if (saveFile.isDirectory()) {
+            throw new IllegalArgumentException("A saved game must be a file");
+        }
+        try {
+            Files.deleteIfExists(saveFile.toPath());
+        } catch (IOException error) {
+            throw new IllegalStateException("Could not delete game: " + saveFile.getAbsolutePath(), error);
         }
     }
 

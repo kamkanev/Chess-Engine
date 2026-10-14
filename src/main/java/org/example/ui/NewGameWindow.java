@@ -1,6 +1,7 @@
 package org.example.ui;
 
 import org.example.Board;
+import org.example.StockfishEngine;
 import org.example.save.SaveManager;
 
 import javax.swing.*;
@@ -14,6 +15,10 @@ public class NewGameWindow extends JFrame {
     private final String title;
     private final JTextField gameName = new JTextField(generateGameName(), 18);
     private final JPanel palettePanel = new JPanel(new GridLayout(1, 4, 14, 14));
+    private final PlayerColorSelector playerColor = new PlayerColorSelector();
+    private final JSpinner stockfishLevel = new JSpinner(new SpinnerNumberModel(10, 0, 20, 1));
+    private final JPanel engineOptions = new JPanel(new GridBagLayout());
+    private final JTextField stockfishPath = new JTextField(StockfishEngine.defaultExecutable(), 24);
     private final JRadioButton onePlayerButton = new JRadioButton("1 Player", true);
     private final JRadioButton twoPlayerButton = new JRadioButton("2 Players");
     private Color selectedWhiteSquare = Board.DEFAULT_WHITE_SQUARE;
@@ -40,7 +45,15 @@ public class NewGameWindow extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
 
+        onePlayerButton.addActionListener(e -> updateEngineOptions());
+        twoPlayerButton.addActionListener(e -> updateEngineOptions());
         showNewGameOptions();
+    }
+
+    private void updateEngineOptions() {
+        engineOptions.setVisible(onePlayerButton.isSelected());
+        revalidate();
+        repaint();
     }
 
     private void showNewGameOptions() {
@@ -89,6 +102,34 @@ public class NewGameWindow extends JFrame {
         playerModePanel.add(twoPlayerButton);
         content.add(playerModePanel, constraints);
 
+        engineOptions.removeAll();
+        engineOptions.setOpaque(false);
+        JPanel choices = new JPanel(new FlowLayout(FlowLayout.CENTER, 12, 0));
+        choices.setOpaque(false);
+        JLabel colorLabel = new JLabel("Play as");
+        colorLabel.setForeground(Color.WHITE);
+        GridBagConstraints engineConstraints = new GridBagConstraints();
+        engineConstraints.gridx = 0;
+        engineConstraints.weightx = 1;
+        engineConstraints.fill = GridBagConstraints.HORIZONTAL;
+        engineConstraints.insets = new Insets(3, 0, 3, 0);
+        engineOptions.add(colorLabel, engineConstraints);
+        engineOptions.add(playerColor, engineConstraints);
+        JLabel levelLabel = new JLabel("Stockfish level");
+        levelLabel.setForeground(Color.WHITE);
+        choices.add(levelLabel);
+        choices.add(stockfishLevel);
+        JLabel levelHint = new JLabel("0 easiest · 20 strongest");
+        levelHint.setForeground(Color.LIGHT_GRAY);
+        choices.add(levelHint);
+        engineOptions.add(choices, engineConstraints);
+        JLabel engineLabel = new JLabel("Stockfish executable");
+        engineLabel.setForeground(Color.WHITE);
+        engineOptions.add(engineLabel, engineConstraints);
+        engineOptions.add(stockfishPath, engineConstraints);
+        engineOptions.setVisible(onePlayerButton.isSelected());
+        content.add(engineOptions, constraints);
+
         JLabel paletteLabel = new JLabel("Choose board colors");
         paletteLabel.setForeground(Color.WHITE);
         paletteLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
@@ -111,7 +152,11 @@ public class NewGameWindow extends JFrame {
 
         content.add(buttonPanel, constraints);
 
-        setContentPane(content);
+        JScrollPane scroll = new JScrollPane(content);
+        scroll.setBorder(BorderFactory.createEmptyBorder());
+        scroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        scroll.getVerticalScrollBar().setUnitIncrement(20);
+        setContentPane(scroll);
         revalidate();
         repaint();
     }
@@ -149,6 +194,18 @@ public class NewGameWindow extends JFrame {
             gameName.setText(name);
         }
 
+        if (onePlayerButton.isSelected() && stockfishPath.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Enter the path to your Stockfish executable.");
+            return;
+        }
+        if (onePlayerButton.isSelected()) {
+            try {
+                stockfishLevel.commitEdit();
+            } catch (java.text.ParseException error) {
+                JOptionPane.showMessageDialog(this, "Choose a Stockfish level from 0 to 20.");
+                return;
+            }
+        }
         setTitle("Chess - " + name);
 
         JPanel gamePanel = new JPanel(new BorderLayout());
@@ -164,7 +221,18 @@ public class NewGameWindow extends JFrame {
         JPanel boardPanel = new JPanel(new GridBagLayout());
         boardPanel.setBackground(Color.BLACK);
         File saveFile = SaveManager.createSaveFile(name);
-        boardPanel.add(new Board(selectedWhiteSquare, selectedBlackSquare, twoPlayerButton.isSelected(), name, saveFile));
+        Board board = new Board(selectedWhiteSquare, selectedBlackSquare, twoPlayerButton.isSelected(), name, saveFile);
+        if (onePlayerButton.isSelected()) {
+            boolean humanWhite = playerColor.chooseHumanWhite();
+            int level = (Integer) stockfishLevel.getValue();
+            board.enableStockfish(stockfishPath.getText().trim(), humanWhite, level);
+            JLabel opponent = new JLabel("You: " + (humanWhite ? "White" : "Black") + " · Stockfish level " + level);
+            opponent.setForeground(Color.WHITE);
+            topPanel.add(opponent);
+        }
+        topPanel.add(GameResultScreen.createSurrenderButton(board, this,
+                () -> GameResultScreen.show(this, board, this::goBackToMainMenu)));
+        boardPanel.add(board);
 
         gamePanel.add(topPanel, BorderLayout.NORTH);
         gamePanel.add(boardPanel, BorderLayout.CENTER);
